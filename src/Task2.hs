@@ -3,11 +3,19 @@
 
 module Task2 where
 
+import Data.Foldable (Foldable(toList))
+
 -- | Infinite stream of elements
 data Stream a = Stream a (Stream a)
 
+instance Show a => Show (Stream a) where
+  show = show . take 10 . toList
+
+instance Functor Stream where
+  fmap f (Stream x xs) = Stream (f x) (fmap f xs)
+
 instance Foldable Stream where
-  foldMap = error "TODO: define foldMap"
+ foldMap f (Stream x xs) = f x <> foldMap f xs 
 
 -- | Converts given list into stream
 --
@@ -22,7 +30,8 @@ instance Foldable Stream where
 -- [1,2,3,4,5,6,7,8,9,10]
 --
 fromList :: a -> [a] -> Stream a
-fromList = error "TODO: define fromList"
+fromList def []     = Stream def (fromList def [])
+fromList def (x:xs) = Stream x (fromList def xs)
 
 -- | Builds stream from given seed value by applying given step function
 --
@@ -36,7 +45,9 @@ fromList = error "TODO: define fromList"
 -- [5,4,3,2,1,0,1,2,3,4]
 --
 unfold :: (b -> (a, b)) -> b -> Stream a
-unfold = error "TODO: define unfold"
+unfold f seed = Stream val (unfold f nextSeed)
+  where 
+    (val, nextSeed) = f seed 
 
 -- | Returns infinite stream of natural numbers (excluding zero)
 --
@@ -46,7 +57,7 @@ unfold = error "TODO: define unfold"
 -- [1,2,3,4,5,6,7,8,9,10]
 --
 nats :: Stream Integer
-nats = error "TODO: define nats (Task2)"
+nats = unfold (\n -> (n, n + 1)) 1
 
 -- | Returns infinite stream of fibonacci numbers (starting with zero)
 --
@@ -56,7 +67,7 @@ nats = error "TODO: define nats (Task2)"
 -- [0,1,1,2,3,5,8,13,21,34]
 --
 fibs :: Stream Integer
-fibs = error "TODO: define fibs (Task2)"
+fibs = unfold (\(x, y) -> (x, (y, x + y))) (0, 1)
 
 -- | Returns infinite stream of prime numbers
 --
@@ -66,7 +77,7 @@ fibs = error "TODO: define fibs (Task2)"
 -- [2,3,5,7,11,13,17,19,23,29]
 --
 primes :: Stream Integer
-primes = error "TODO: define primes (Task2)"
+primes = unfold sieve (fromList undefined [2..])
 
 -- | One step of Sieve of Eratosthenes
 -- (to be used with 'unfoldr')
@@ -83,4 +94,9 @@ primes = error "TODO: define primes (Task2)"
 -- (3,[5,7,11,13,17,19,23,25,29,31])
 --
 sieve :: Stream Integer -> (Integer, Stream Integer)
-sieve = error "TODO: define sieve (Task2)"
+sieve (Stream p xs) = (p, filterStream (\x -> x `mod` p /= 0) xs)
+
+filterStream :: (a -> Bool) -> Stream a -> Stream a
+filterStream f (Stream x xs)
+  | f x       = Stream x (filterStream f xs)
+  | otherwise = filterStream f xs
